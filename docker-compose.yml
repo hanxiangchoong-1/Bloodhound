@@ -1,0 +1,30 @@
+
+services:
+  fastapi:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./logs:/var/log/fastapi
+    environment:
+      - ELASTIC_CLOUD_ID=${ELASTIC_CLOUD_ID}
+      - ELASTIC_CLOUD_AUTH=${ELASTIC_CLOUD_AUTH}
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.14.1
+    volumes:
+      - "./logstash/config/logstash.conf:/usr/share/logstash/pipeline/logstash.conf"
+    environment:
+      - ELASTIC_CLOUD_ID=${ELASTIC_CLOUD_ID}
+      - ELASTIC_CLOUD_AUTH=${ELASTIC_CLOUD_AUTH}
+    ports:
+      - "5044:5044"
+
+  # filebeat:
+  #   image: docker.elastic.co/beats/filebeat:8.14.1
+  #   volumes:
+  #     - ./filebeat.yml:/usr/share/filebeat/filebeat.yml
+  #     - ./logs:/var/log/fastapi
+  #   environment:
+  #     - ELASTIC_CLOUD_ID=${ELASTIC_CLOUD_ID}
+  #     - ELASTIC_CLOUD_AUTH=${ELASTIC_CLOUD_AUTH}
