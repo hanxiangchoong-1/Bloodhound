@@ -13,8 +13,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application code into the container
 COPY . /app
 
+# Install curl for the initialize_es.sh script
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Ensure the initialize_es.sh script is executable
+RUN chmod +x /app/initialize_es.sh
+
 # Expose the port the app runs on
 EXPOSE 8000
 
-# Command to run the FastAPI app with uvicorn
-CMD ["python", "/app/main.py"]
+# Run the initialize_es.sh script and then start the FastAPI app
+ENTRYPOINT ["/bin/bash", "-c", "/app/initialize_es.sh && python /app/main.py"]

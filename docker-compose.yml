@@ -7,8 +7,11 @@ services:
     volumes:
       - ./logs:/var/log/fastapi
     environment:
+      - ELASTIC_CLOUD_ENDPOINT=${ELASTIC_CLOUD_ENDPOINT}
       - ELASTIC_CLOUD_ID=${ELASTIC_CLOUD_ID}
       - ELASTIC_CLOUD_AUTH=${ELASTIC_CLOUD_AUTH}
+      - ELASTIC_USERNAME=${ELASTIC_USERNAME}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
 
   logstash:
     image: docker.elastic.co/logstash/logstash:8.14.1
