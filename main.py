@@ -8,17 +8,34 @@ from webcrawler import Webscraper, ProcessorType
 
 LOGSTASH_URL = "http://logstash:5044"
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-logger.addHandler(logging.StreamHandler())
-logger.handlers[0].setFormatter(jsonlogger.JsonFormatter())
-
 class URLRequest(BaseModel):
     """Pydantic model for URL request."""
     url: str
     processor: ProcessorType
 
+class LogstashHandler(logging.Handler):
+    def emit(self, record):
+        log_entry = self.format(record)
+        try:
+            requests.post(LOGSTASH_URL, json={"type": "app_log", "message": log_entry}, timeout=60)
+        except Exception as e:
+            logger.error("Error posting log to Logstash: %s", str(e))
+
 app = FastAPI()
+
+# Configure logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+# Console handler
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(jsonlogger.JsonFormatter())
+logger.addHandler(console_handler)
+
+# Logstash handler
+logstash_handler = LogstashHandler()
+logstash_handler.setFormatter(jsonlogger.JsonFormatter())
+logger.addHandler(logstash_handler)
 
 @app.post("/fetch_html")
 async def fetch_html(request: URLRequest, req: Request):
