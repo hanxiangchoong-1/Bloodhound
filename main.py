@@ -26,7 +26,7 @@ async def fetch_html(request: URLRequest, req: Request):
     Fetch HTML content from the provided URL and send to Logstash.
     Returns the fetched document with added IP address.
     """
-    document = Webscraper.fetch_html(request.url, request.processor)
+    document = await Webscraper.fetch_html(request.url, request.processor)
     document["ip_address"] = req.client.host
     try:
         requests.post(LOGSTASH_URL, json={"type": "html_content", "document": document}, timeout=60)

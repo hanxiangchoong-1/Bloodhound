@@ -1,5 +1,5 @@
 from datetime import datetime
-import requests
+import aiohttp
 from fastapi import HTTPException
 from typing import Dict, Type
 from enum import Enum
@@ -7,14 +7,12 @@ import logging
 
 from webdataprocessors import BaseProcessor, CNAProcessor
 
-# Assuming you're using the same logger setup as in the main file
 logger = logging.getLogger(__name__)
 
 class ProcessorType(str, Enum):
     CNA = "CNA"
     # Add other processor types here as needed
 
-# This should be imported or defined here if it's used in this file
 dataprocessors: Dict[ProcessorType, Type[BaseProcessor]] = {
     ProcessorType.CNA: CNAProcessor
     # Add other processors here
@@ -22,9 +20,9 @@ dataprocessors: Dict[ProcessorType, Type[BaseProcessor]] = {
 
 class Webscraper:
     @staticmethod
-    def fetch_html(url: str, processor: ProcessorType) -> dict:
+    async def fetch_html(url: str, processor: ProcessorType) -> dict:
         """
-        Fetch and parse HTML content from a given URL.
+        Fetch and parse HTML content from a given URL asynchronously.
         Returns a dict with content, URL, and timestamp.
         Raises HTTPException on request errors.
         """
@@ -36,22 +34,24 @@ class Webscraper:
             'Referer': 'https://www.google.com/'
         }
         try:
-            response = requests.get(url, headers=headers, timeout=60)
-            response.raise_for_status()
-            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, headers=headers, timeout=60) as response:
+                    response.raise_for_status()
+                    text = await response.text()
+
             processor_class = dataprocessors.get(processor)
             if not processor_class:
                 raise ValueError(f"Unknown processor type: {processor}")
             
             processor_instance = processor_class()
-            processed_content = processor_instance.process(response.text)
+            processed_content = processor_instance.process(text)
             
             return {
                 "content": processed_content,
                 "url": url,
                 "timestamp": datetime.utcnow().isoformat()
             }
-        except requests.exceptions.RequestException as e:
+        except aiohttp.ClientError as e:
             logger.error("Error fetching %s: %s", url, str(e))
             raise HTTPException(status_code=500, detail=str(e))
         except ValueError as e:
