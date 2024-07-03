@@ -1,11 +1,11 @@
-class GenericProcessor:
+class BaseProcessor:
     def process(self, data):
         """
         Generic processing method to be overridden by specialized classes.
         """
         raise NotImplementedError("This method should be implemented by subclasses")
 
-class CNAProcessor(GenericProcessor):
+class CNAProcessor(BaseProcessor):
     def process(self, html_content):
         """
         Process HTML content.

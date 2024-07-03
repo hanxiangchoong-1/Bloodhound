@@ -1,14 +1,10 @@
-from datetime import datetime
 import logging
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from pydantic import BaseModel
 import requests
-from bs4 import BeautifulSoup
 from pythonjsonlogger import jsonlogger
 import uvicorn
-from webdataprocessors import CNAProcessor
-
-dataprocessors={'CNA':CNAProcessor}
+from webcrawler import Webscraper, ProcessorType
 
 LOGSTASH_URL = "http://logstash:5044"
 
@@ -20,35 +16,10 @@ logger.handlers[0].setFormatter(jsonlogger.JsonFormatter())
 class URLRequest(BaseModel):
     """Pydantic model for URL request."""
     url: str
-
-class Webscraper:
-    @staticmethod
-    def fetch_html(url, processor):
-        """
-        Fetch and parse HTML content from a given URL.
-        Returns a dict with content, URL, and timestamp.
-        Raises HTTPException on request errors.
-        """
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Safari/537.36',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
-            'Referer': 'https://www.google.com/'
-        }
-        try:
-            response = requests.get(url, headers=headers, timeout=60)
-            response.raise_for_status()
-            return {
-                "content": dataprocessors[processor](response.text),
-                "url": url,
-                "timestamp": datetime.utcnow().isoformat()
-            }
-        except requests.exceptions.RequestException as e:
-            logger.error("Error fetching %s: %s", url, str(e))
-            raise HTTPException(status_code=500, detail=str(e))
+    processor: ProcessorType
 
 app = FastAPI()
+
 @app.post("/fetch_html")
 async def fetch_html(request: URLRequest, req: Request):
     """
