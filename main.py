@@ -6,6 +6,9 @@ import requests
 from bs4 import BeautifulSoup
 from pythonjsonlogger import jsonlogger
 import uvicorn
+from webdataprocessors import CNAProcessor
+
+dataprocessors={'CNA':CNAProcessor}
 
 LOGSTASH_URL = "http://logstash:5044"
 
@@ -20,7 +23,7 @@ class URLRequest(BaseModel):
 
 class Webscraper:
     @staticmethod
-    def fetch_html(url):
+    def fetch_html(url, processor):
         """
         Fetch and parse HTML content from a given URL.
         Returns a dict with content, URL, and timestamp.
@@ -37,7 +40,7 @@ class Webscraper:
             response = requests.get(url, headers=headers, timeout=60)
             response.raise_for_status()
             return {
-                "content": BeautifulSoup(response.text, 'html.parser').get_text(separator=' ', strip=True),
+                "content": dataprocessors[processor](response.text),
                 "url": url,
                 "timestamp": datetime.utcnow().isoformat()
             }
@@ -52,7 +55,7 @@ async def fetch_html(request: URLRequest, req: Request):
     Fetch HTML content from the provided URL and send to Logstash.
     Returns the fetched document with added IP address.
     """
-    document = Webscraper.fetch_html(request.url)
+    document = Webscraper.fetch_html(request.url, request.processor)
     document["ip_address"] = req.client.host
     try:
         requests.post(LOGSTASH_URL, json={"type": "html_content", "document": document}, timeout=60)
