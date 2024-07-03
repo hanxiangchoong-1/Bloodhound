@@ -10,17 +10,15 @@ class BaseProcessor:
 
         content = {
             "title": "",
-            "headings": {
-                "h1": [],
-                "h2": [],
-                "h3": [],
-                "h4": [],
-                "h5": [],
-                "h6": []
-            },
+            "h1": [],
+            "h2": [],
+            "h3": [],
+            "h4": [],
+            "h5": [],
+            "h6": [],
             "paragraphs": [],
             "links": [],
-            "images": [],
+            # "images": [],
             "lists": {
                 "ul": [],
                 "ol": []
@@ -41,7 +39,7 @@ class BaseProcessor:
         # Extract headings
         for i in range(1, 7):
             heading_tags = soup.find_all(f'h{i}')
-            content["headings"][f"h{i}"] = [tag.get_text(strip=True) for tag in heading_tags]
+            content[f"h{i}"] = [tag.get_text(strip=True) for tag in heading_tags]
 
         # Extract paragraphs
         paragraphs = soup.find_all('p')
@@ -52,8 +50,8 @@ class BaseProcessor:
         content["links"] = [{"text": a.get_text(strip=True), "href": urljoin(root_base_url, a.get('href'))} for a in links]
 
         # Extract images
-        images = soup.find_all('img')
-        content["images"] = [{"src": img.get('src'), "alt": img.get('alt')} for img in images]
+        # images = soup.find_all('img')
+        # content["images"] = [{"src": img.get('src'), "alt": img.get('alt')} for img in images]
 
         # Extract lists
         for list_type in ['ul', 'ol']:
