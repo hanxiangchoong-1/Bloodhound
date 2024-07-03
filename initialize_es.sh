@@ -54,4 +54,4 @@ create_index() {
 # Create indices with aliases
 create_index "webcrawler_content-000001" "webcrawler_content"
 create_index "webcrawler_app_logs-000001" "webcrawler_app_logs"
-create_index "webcrawler_metricbeat_logs-000001" "webcrawler_metricbeat_logs"
+create_index "webcrawler_metrics-000001" "webcrawler_metrics"

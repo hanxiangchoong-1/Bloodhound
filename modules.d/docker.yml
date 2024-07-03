@@ -1,6 +1,0 @@
-- module: docker
-  period: 10s
-  hosts: ["unix:///var/run/docker.sock"]
-
-  processors:
-    - add_docker_metadata: ~

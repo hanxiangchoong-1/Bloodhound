@@ -1,16 +1,26 @@
-metricbeat.config.modules:
-  path: ${path.config}/modules.d/*.yml
-  reload.enabled: false
-
-setup.template.settings:
-  index.number_of_shards: 1
+metricbeat.modules:
+- module: system
+  metricsets:
+    - cpu
+    - load
+    - memory
+    - network
+    - process
+    - process_summary
+    - uptime
+  period: 120s
 
 output.logstash:
   hosts: ["logstash:5045"]
+  bulk_max_size: 1
+  bulk_flush_frequency: 60s
 
 processors:
   - add_host_metadata: ~
   - add_cloud_metadata: ~
+
+setup.template.settings:
+  index.number_of_shards: 1
 
 logging.level: info
 logging.to_files: false
