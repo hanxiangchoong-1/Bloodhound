@@ -1,4 +1,3 @@
-from datetime import datetime
 import aiohttp
 from fastapi import HTTPException
 from typing import Dict, Type
@@ -37,20 +36,15 @@ class Webscraper:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, headers=headers, timeout=60) as response:
                     response.raise_for_status()
-                    text = await response.text()
+                    html = await response.text()
 
             processor_class = dataprocessors.get(processor)
             if not processor_class:
                 raise ValueError(f"Unknown processor type: {processor}")
             
             processor_instance = processor_class()
-            processed_content = processor_instance.process(text)
-            
-            return {
-                "content": processed_content,
-                "url": url,
-                "timestamp": datetime.utcnow().isoformat()
-            }
+            processed_content = processor_instance.process(html, url)
+            return processed_content
         except aiohttp.ClientError as e:
             logger.error("Error fetching %s: %s", url, str(e))
             raise HTTPException(status_code=500, detail=str(e))
