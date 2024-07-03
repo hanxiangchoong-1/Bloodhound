@@ -1,0 +1,14 @@
+- module: system
+  period: 10s
+  metricsets:
+    - cpu
+    - load
+    - memory
+    - network
+    - process
+    - process_summary
+    - uptime
+
+  processors:
+    - add_host_metadata: ~
+    - add_cloud_metadata: ~

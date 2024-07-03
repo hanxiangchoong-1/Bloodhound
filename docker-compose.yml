@@ -24,11 +24,16 @@ services:
     ports:
       - "5044:5044"
 
-  # filebeat:
-  #   image: docker.elastic.co/beats/filebeat:8.14.1
-  #   volumes:
-  #     - ./filebeat.yml:/usr/share/filebeat/filebeat.yml
-  #     - ./logs:/var/log/fastapi
-  #   environment:
-  #     - ELASTIC_CLOUD_ID=${ELASTIC_CLOUD_ID}
-  #     - ELASTIC_CLOUD_AUTH=${ELASTIC_CLOUD_AUTH}
+  metricbeat:
+    image: docker.elastic.co/beats/metricbeat:8.14.1
+    volumes:
+      - "./metricbeat.yml:/usr/share/metricbeat/metricbeat.yml:ro"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "/sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro"
+      - "/proc:/hostfs/proc:ro"
+      - "/:/hostfs:ro"
+    environment:
+      - ELASTIC_CLOUD_ENDPOINT=${ELASTIC_CLOUD_ENDPOINT}
+      - ELASTIC_CLOUD_ID=${ELASTIC_CLOUD_ID}
+      - ELASTIC_CLOUD_AUTH=${ELASTIC_CLOUD_AUTH}
+    user: root
