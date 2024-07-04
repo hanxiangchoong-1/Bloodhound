@@ -7,6 +7,7 @@ import logging
 from openai import AsyncOpenAI
 import asyncio
 from urllib.parse import urljoin, urlparse
+import re
 
 from webdataprocessors import BaseProcessor, CNAProcessor
 
@@ -52,14 +53,61 @@ class Webscraper:
             raise HTTPException(status_code=400, detail=str(e))
         
     @staticmethod
-    async def choose_urls(urls: List[str], objective: str) -> List[str]:
+    async def filter_urls(urls: List[str]) -> List[str]:
+        system_prompt = '''
+        You are a URL filter. Your task is to analyze a list of URLs and remove any that are unlikely to lead to articles or sources of information.
+        Remove URLs that lead to:
+        1. User pages
+        2. Edit pages
+        3. Discussion or talk pages
+        4. Special pages (e.g., search, recent changes)
+        5. File uploads
+        6. Language selection pages
+        7. Login/logout pages
+        8. Any other non-content pages
+
+        Return only the filtered list of URLs, each on a new line.
+        '''
+        prompt = "Filter the following URLs, keeping only those likely to lead to articles or information sources:\n\n"
+        prompt += "\n".join(urls)
+
+        await asyncio.sleep(0.5)
+
+        response = await Webscraper.openai_client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ]
+        )
+
+        filtered_urls = response.choices[0].message.content.strip().split('\n')
+        return filtered_urls
+    
+    @staticmethod
+    async def choose_urls(urls: List[str], objective: str, visited: List[str]) -> List[str]:
         system_prompt='''
-        "You are a web crawler assistant. Your task is to select the most relevant URLs based on the given objective. 
-        Return the chosen url only like this:
+        "You are an investigator. Your objective is provided. Your task is to find out as much information as possible about it. 
+        To do this, you will be given a set of urls. You must choose the URL that you judge most likely to lead to the information you seek, eventually.
+        None of the links may be directly relevant. The challenge is to choose the link likeliest to lead to future relevant links.
+        The url you choose will be followed, and another set of urls presented to a future version of you.
+        Find the truth. Godspeed.
+ 
+        Return the chosen url only, like this:
 
         https://example.com
+
+        If there are no relevant URLs, then return this token:
+        TERMINATE
         '''
-        prompt = f"Given the following URLs and the objective '{objective}', the most relevant URL:\n\n"
+        if len(visited)>0:
+            visited_string=', '.join(visited)
+        else:
+            visited_string='NONE'
+        prompt = f'''
+        These are the links you have visited already: {visited_string}. Progress meaningfully from here. 
+        Given the following URLs and the objective '{objective}', return the most relevant URL:\n\n
+        '''
         prompt += "\n".join(urls)
 
         await asyncio.sleep(0.5)
@@ -76,30 +124,69 @@ class Webscraper:
         return chosen_url
 
     @staticmethod
-    async def crawl_recursive(url: str, depth: int, max_depth: int, objective: str, processor: ProcessorType) -> List[dict]:
-        if depth > max_depth:
-            return []
+    def filter_urls_programmatically(base_url: str, urls: List[str]) -> List[str]:
+        filtered_urls = []
+        base_domain = urlparse(base_url).netloc
 
-        try:
-            content = await Webscraper.fetch_html(url, processor)
-        except HTTPException:
-            return []
+        for url in urls:
+            # Ensure the URL is absolute
+            absolute_url = urljoin(base_url, url)
+            parsed_url = urlparse(absolute_url)
+            
+            # Skip URLs that are not on the same domain
+            if parsed_url.netloc != base_domain:
+                continue
 
-        results = [content]
+            # Skip URLs with common non-content indicators
+            if any(indicator in parsed_url.path.lower() for indicator in [
+                'user:', 'talk:', 'special:', 'file:', 'category:', 'template:',
+                'help:', 'portal:', '/w/', 'index.php', 'main_page'
+            ]):
+                continue
 
-        urls = [link['href'] for link in content.get('links', [])]
- 
-        chosen_url = await Webscraper.choose_urls(urls, objective)
+            # Skip URLs that likely lead to utility pages
+            if re.search(r'(edit|history|action=|oldid=|printable=|user:|search)', parsed_url.path.lower()):
+                continue
 
-        # Small delay to prevent rate limiting errors
-        await asyncio.sleep(0.1)
+            # Skip anchor links within the same page
+            if parsed_url.path == urlparse(base_url).path and parsed_url.fragment:
+                continue
 
-        if chosen_url:
-            child_result = await Webscraper.crawl_recursive(chosen_url, depth + 1, max_depth, objective, processor)
-            results.extend(child_result)
+            filtered_urls.append(absolute_url)
 
-        return results
+        return filtered_urls
 
     @staticmethod
     async def crawl(start_url: str, max_path_length: int, objective: str, processor: ProcessorType) -> List[dict]:
-        return await Webscraper.crawl_recursive(start_url, 1, max_path_length, objective, processor)
+        results = []
+        current_url = start_url
+        visited=[]
+        
+        for depth in range(1, max_path_length + 1):
+            try:
+                content = await Webscraper.fetch_html(current_url, processor)
+            except HTTPException:
+                break
+
+            results.append(content)
+            visited.append(current_url)
+            urls = [link['href'] for link in content.get('links', []) if link['href'] not in visited]
+            
+            # Filter URLs programmatically first
+            filtered_urls = Webscraper.filter_urls_programmatically(current_url, urls)
+            
+            # Then use GPT-4o to choose from the filtered URLs
+            chosen_url = await Webscraper.choose_urls(filtered_urls, objective, visited)
+            
+            if chosen_url == 'TERMINATE':
+                break
+
+            # Small delay to prevent rate limiting errors
+            await asyncio.sleep(0.1)
+
+            if not chosen_url:
+                break
+
+            current_url = chosen_url
+
+        return results
