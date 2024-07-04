@@ -13,6 +13,13 @@ class URLRequest(BaseModel):
     url: str
     processor: ProcessorType
 
+class CrawlRequest(BaseModel):
+    """Pydantic model for crawl request."""
+    start_url: str
+    max_path_length: int
+    objective: str
+    processor: ProcessorType
+
 class LogstashHandler(logging.Handler):
     def emit(self, record):
         log_entry = self.format(record)
@@ -51,6 +58,29 @@ async def fetch_html(request: URLRequest, req: Request):
         logger.error("Error posting to Logstash: %s", str(e))
     logger.info("Fetched content from URL: %s", request.url)
     return document
+
+@app.post("/crawl")
+async def crawl(request: CrawlRequest, req: Request):
+    """
+    Crawl websites starting from the provided URL, using the specified parameters.
+    Returns the crawled documents.
+    """
+    results = await Webscraper.crawl(
+        request.start_url,
+        request.max_path_length,
+        request.objective,
+        request.processor
+    )
+    
+    for document in results:
+        document["ip_address"] = req.client.host
+        try:
+            requests.post(LOGSTASH_URL, json={"type": "html_content", "document": document}, timeout=60)
+        except Exception as e:
+            logger.error("Error posting to Logstash: %s", str(e))
+    
+    logger.info("Crawled %d pages starting from URL: %s", len(results), request.start_url)
+    return {"results": results}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

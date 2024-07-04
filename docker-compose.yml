@@ -12,6 +12,7 @@ services:
       - ELASTIC_CLOUD_AUTH=${ELASTIC_CLOUD_AUTH}
       - ELASTIC_USERNAME=${ELASTIC_USERNAME}
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
 
   logstash:
     image: docker.elastic.co/logstash/logstash:8.14.1
