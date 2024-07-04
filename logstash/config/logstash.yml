@@ -1,3 +1,4 @@
+xpack.monitoring.enabled: true
 xpack.monitoring.elasticsearch.hosts: ["${ELASTIC_CLOUD_ENDPOINT}"]
 xpack.monitoring.elasticsearch.username: "${ELASTIC_USERNAME}"
 xpack.monitoring.elasticsearch.password: "${ELASTIC_PASSWORD}"

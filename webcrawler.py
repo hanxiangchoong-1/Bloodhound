@@ -9,11 +9,11 @@ from webdataprocessors import BaseProcessor, CNAProcessor
 logger = logging.getLogger(__name__)
 
 class ProcessorType(str, Enum):
-    CNA = "CNA"
+    BASE = "BASE"
     # Add other processor types here as needed
 
 dataprocessors: Dict[ProcessorType, Type[BaseProcessor]] = {
-    ProcessorType.CNA: CNAProcessor
+    ProcessorType.BASE: BaseProcessor
     # Add other processors here
 }
 
@@ -43,7 +43,7 @@ class Webscraper:
                 raise ValueError(f"Unknown processor type: {processor}")
             
             processor_instance = processor_class()
-            processed_content = processor_instance.process(html, url)
+            processed_content = processor_instance.extract_content(html, url)
             return processed_content
         except aiohttp.ClientError as e:
             logger.error("Error fetching %s: %s", url, str(e))

@@ -4,8 +4,8 @@ import re
 from datetime import datetime
 
 class BaseProcessor:
-    def extract_content(self, soup, base_url):
-
+    def extract_content(self, html_content, base_url):
+        soup = BeautifulSoup(html_content, 'html.parser')
         root_base_url = f"{urlparse(base_url).scheme}://{urlparse(base_url).netloc}"
 
         content = {
@@ -81,15 +81,15 @@ class BaseProcessor:
         return content
 
 class CNAProcessor(BaseProcessor):
+    pass
     
-    def process(self, html_content, base_url):
-        """
-        Process HTML content.
-        Extracts text content and all URLs from the page.
-        """
-        soup = BeautifulSoup(html_content, 'html.parser')
+    # def process(self, html_content, base_url):
+    #     """
+    #     Process HTML content.
+    #     Extracts text content and all URLs from the page.
+    #     """
         
-        # Extract text content
-        # text_content = soup.get_text(separator=' ', strip=True)
-        page_content=self.extract_content(soup, base_url)
-        return page_content
+    #     # Extract text content
+    #     # text_content = soup.get_text(separator=' ', strip=True)
+    #     page_content=self.extract_content(soup, base_url)
+    #     return page_content
